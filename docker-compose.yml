@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: simbank-postgres
+    environment:
+      POSTGRES_USER: banca
+      POSTGRES_PASSWORD: banca_password
+      POSTGRES_DB: banca_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banca -d banca_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  tigerbeetle-init:
+    image: ghcr.io/tigerbeetle/tigerbeetle:0.16.31
+    container_name: simbank-tb-init
+    volumes:
+      - tbdata:/data
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -f /data/0_0.tigerbeetle ]; then
+          echo "Formatting TigerBeetle data file..."
+          ./tigerbeetle format --cluster=0 --replica=0 --replica-count=1 --development /data/0_0.tigerbeetle
+          echo "Format complete."
+        else
+          echo "Data file already exists, skipping format."
+        fi
+
+  tigerbeetle:
+    image: ghcr.io/tigerbeetle/tigerbeetle:0.16.31
+    container_name: simbank-tb
+    depends_on:
+      tigerbeetle-init:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    volumes:
+      - tbdata:/data
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    command: "start --addresses=0.0.0.0:3000 --development /data/0_0.tigerbeetle"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: simbank-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      tigerbeetle:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: ${PORT:-8080}
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://banca:banca_password@postgres:5432/banca_db?sslmode=disable}
+      TIGERBEETLE_ADDRESS: ${TIGERBEETLE_ADDRESS:-tigerbeetle:3000}
+      TIGERBEETLE_CLUSTER_ID: ${TIGERBEETLE_CLUSTER_ID:-0}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-openai/gpt-4o}
+      SEED_DATA_PATH: ${SEED_DATA_PATH:-/app/data/datos-prueba-HNL.json}
+    volumes:
+      - ./data:/app/data:ro
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: simbank-frontend
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  tbdata:
