@@ -13,6 +13,19 @@ function formatTime(ts) {
   })
 }
 
+function TxIcon({ type }) {
+  const cfg = type === 'deposit'
+    ? { bg: 'bg-emerald-500/15', fg: 'text-emerald-400', icon: '+' }
+    : type === 'withdrawal'
+    ? { bg: 'bg-red-500/15', fg: 'text-red-400', icon: '−' }
+    : { bg: 'bg-cyan-500/15', fg: 'text-cyan-400', icon: '↗' }
+  return (
+    <div className={`w-10 h-10 rounded-xl ${cfg.bg} flex items-center justify-center ${cfg.fg} font-bold text-lg`}>
+      {cfg.icon}
+    </div>
+  )
+}
+
 export default function History() {
   const [txs, setTxs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -39,51 +52,70 @@ export default function History() {
   const hasMore = txs.length > (page + 1) * PAGE_SIZE
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Historial de transacciones</h1>
+    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 animate-fade-in">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Historial</h1>
+        <p className="text-slate-400 text-sm mt-1">Todas las transacciones de tu cuenta</p>
+      </div>
 
       {error && (
-        <div className="bg-red-900/50 border border-red-700 text-red-200 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/20 text-red-300 text-sm rounded-xl px-4 py-3 flex items-center gap-2 mb-4">
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {error}
+        </div>
       )}
 
-      {loading ? (
-        <div className="space-y-3 animate-pulse">
+      {loading && txs.length === 0 ? (
+        <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 bg-gray-800 rounded-lg" />
+            <div key={i} className="glass-card rounded-xl p-4 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/5" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-24 bg-white/5 rounded" />
+                  <div className="h-3 w-32 bg-white/5 rounded" />
+                </div>
+                <div className="h-4 w-20 bg-white/5 rounded" />
+              </div>
+            </div>
           ))}
         </div>
       ) : txs.length === 0 ? (
-        <div className="text-center py-16 bg-gray-900 border border-gray-800 rounded-xl">
-          <p className="text-gray-400 text-lg mb-1">Sin movimientos</p>
-          <p className="text-gray-600 text-sm">Aún no hay transacciones registradas en tu cuenta.</p>
+        <div className="glass-card rounded-2xl text-center py-16 px-6">
+          <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <p className="text-slate-400 font-medium mb-1">Sin movimientos</p>
+          <p className="text-slate-500 text-sm">Aún no hay transacciones registradas en tu cuenta.</p>
         </div>
       ) : (
         <>
           <div className="space-y-2">
-            {displayed.map((tx) => {
+            {displayed.map((tx, i) => {
               const isInflow = tx.type === 'deposit'
               const isOutflow = tx.type === 'withdrawal'
               return (
-                <div key={tx.id} className="bg-gray-900 border border-gray-800 rounded-lg p-4 flex items-center justify-between hover:border-gray-700 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                      isInflow ? 'bg-green-900/50 text-green-400' : isOutflow ? 'bg-red-900/50 text-red-400' : 'bg-cyan-900/50 text-cyan-400'
-                    }`}>
-                      {isInflow ? '+' : isOutflow ? '−' : '↗'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-200 capitalize">{tx.type}</p>
-                      <p className="text-xs text-gray-500">{formatTime(tx.timestamp)}</p>
-                      {tx.type === 'transfer' && (
-                        <p className="text-xs text-gray-500">
-                          {tx.from_account === '1' ? 'Banco → ' : ''}
-                          Cuenta: {tx.from_account === '1' ? tx.to_account.slice(0, 8) + '…' : tx.to_account.slice(0, 8) + '…'}
-                        </p>
-                      )}
-                    </div>
+                <div
+                  key={tx.id}
+                  className="glass-card rounded-xl p-4 flex items-center gap-4 hover:bg-white/[0.03] transition-all duration-200 animate-fade-in"
+                  style={{ animationDelay: `${i * 0.03}s` }}
+                >
+                  <TxIcon type={tx.type} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-200 capitalize">
+                      {tx.type === 'deposit' ? 'Depósito' : tx.type === 'withdrawal' ? 'Retiro' : 'Transferencia'}
+                    </p>
+                    <p className="text-xs text-slate-500">{formatTime(tx.timestamp)}</p>
+                    {tx.type === 'transfer' && tx.description && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{tx.description}</p>
+                    )}
                   </div>
-                  <p className={`text-sm font-semibold ${
-                    isInflow ? 'text-green-400' : isOutflow ? 'text-red-400' : 'text-cyan-400'
+                  <p className={`text-sm font-semibold whitespace-nowrap ${
+                    isInflow ? 'text-emerald-400' : isOutflow ? 'text-red-400' : 'text-cyan-400'
                   }`}>
                     {isInflow ? '+' : isOutflow ? '−' : '±'}
                     {formatCurrency(tx.amount)}
@@ -93,21 +125,26 @@ export default function History() {
             })}
           </div>
 
-          <div className="flex justify-center mt-6 gap-3">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm rounded-lg transition-colors"
-            >
-              ← Anterior
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!hasMore}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm rounded-lg transition-colors"
-            >
-              Siguiente →
-            </button>
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-sm text-slate-500">
+              Mostrando {displayed.length} de {txs.length} transacciones
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-4 py-2 glass-light rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                ← Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={!hasMore}
+                className="px-4 py-2 glass-light rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                Siguiente →
+              </button>
+            </div>
           </div>
         </>
       )}

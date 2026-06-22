@@ -57,9 +57,16 @@ func main() {
 		log.Fatalf("leer archivo: %v", err)
 	}
 
+	// Try flat array first, then {"users": [...]}
 	var users []BulkUser
 	if err := json.Unmarshal(data, &users); err != nil {
-		log.Fatalf("parsear JSON: %v", err)
+		var wrapped struct {
+			Users []BulkUser `json:"users"`
+		}
+		if err2 := json.Unmarshal(data, &wrapped); err2 != nil {
+			log.Fatalf("parsear JSON (intenté array y {users: []}): primer error: %v", err)
+		}
+		users = wrapped.Users
 	}
 
 	log.Printf("Cargando %d usuarios desde %s", len(users), path)

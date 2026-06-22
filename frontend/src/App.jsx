@@ -12,9 +12,10 @@ export default function App() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-slate-950 bg-grid">
+      <div className="bg-gradient-radial fixed inset-0 pointer-events-none" />
       {isAuthenticated && <Navbar />}
-      <main className="flex-1">
+      <main className="relative z-10">
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
           <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
