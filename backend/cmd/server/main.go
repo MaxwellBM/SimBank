@@ -1,20 +1,33 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"banca-backend/internal/config"
+	"banca-backend/internal/db"
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	cfg := config.Load()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	store, err := db.NewPostgresStore(ctx, cfg.PostgresDSN)
+	if err != nil {
+		log.Fatalf("failed to connect to postgres: %v", err)
 	}
+	defer store.Close()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -31,9 +44,32 @@ func main() {
 		fmt.Fprint(w, `{"service":"SimBank API","version":"0.1.0"}`)
 	})
 
-	addr := fmt.Sprintf("0.0.0.0:%s", port)
-	log.Printf("SimBank backend starting on %s", addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("server failed: %v", err)
+	srv := &http.Server{
+		Addr:         fmt.Sprintf("0.0.0.0:%s", cfg.Port),
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		log.Printf("SimBank backend starting on %s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server failed: %v", err)
+		}
+	}()
+
+	<-shutdown
+	log.Println("shutting down...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("forced shutdown: %v", err)
+	}
+	log.Println("server stopped")
 }
