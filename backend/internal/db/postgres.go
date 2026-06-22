@@ -70,6 +70,22 @@ func (s *PostgresStore) CreateUser(ctx context.Context, u *User) error {
 	return nil
 }
 
+func (s *PostgresStore) CreateUserPreserveID(ctx context.Context, u *User) error {
+	query := `
+		INSERT INTO users (id, email, password_hash, full_name, tigerbeetle_account_id, account_number, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING updated_at`
+
+	err := s.pool.QueryRow(ctx, query,
+		u.ID, u.Email, u.PasswordHash, u.FullName, u.TigerBeetleAccountID, u.AccountNumber, u.CreatedAt,
+	).Scan(&u.UpdatedAt)
+
+	if err != nil {
+		return fmt.Errorf("create user: %w", err)
+	}
+	return nil
+}
+
 func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 		SELECT id, email, password_hash, full_name,

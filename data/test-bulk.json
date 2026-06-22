@@ -1,0 +1,23 @@
+[
+  {
+    "id": "a0a1a854-d84b-47a3-946d-1f7d204df453",
+    "email": "isabel@test.com",
+    "password": "Isabel2024!",
+    "full_name": "Isabel Muñoz Moreno",
+    "created_at": "2024-02-02T21:34:05Z"
+  },
+  {
+    "id": "b0b2b964-e94c-58b4-a57e-2e8e315ef564",
+    "email": "juan@test.com",
+    "password": "Juan2024!",
+    "full_name": "Juan Pérez López",
+    "created_at": "2024-03-15T10:00:00Z"
+  },
+  {
+    "id": "c0c3ca74-fa5d-69c5-b68f-3f9f426ff675",
+    "email": "maria@test.com",
+    "password": "Maria2024!",
+    "full_name": "María García Rodríguez",
+    "created_at": "2024-04-20T15:30:00Z"
+  }
+]
