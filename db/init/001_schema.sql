@@ -17,15 +17,15 @@ $$ LANGUAGE plpgsql;
 -- ============================================================
 -- Almacena SOLO datos de usuario y autenticacion.
 -- Las cuentas financieras y transacciones viven en TigerBeetle.
--- tigerbeetle_account_id es NUMERIC(39,0) porque TigerBeetle
--- usa IDs de 128 bits (2^128 ~ 3.4e38, cabe en 39 digitos).
+-- tigerbeetle_account_id es TEXT porque almacenamos la
+-- representacion hex del Uint128 de TigerBeetle (ej: "19ee...").
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    tigerbeetle_account_id NUMERIC(39,0) NOT NULL UNIQUE,
+    tigerbeetle_account_id TEXT NOT NULL UNIQUE,
     account_number VARCHAR(30) UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

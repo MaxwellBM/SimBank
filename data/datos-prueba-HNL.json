@@ -1,0 +1,23 @@
+[
+  {
+    "email": "alice@example.com",
+    "full_name": "Alice García",
+    "password": "password123",
+    "account_number": "001-0001",
+    "balance_cents": 10000000
+  },
+  {
+    "email": "bob@example.com",
+    "full_name": "Bob Martínez",
+    "password": "password123",
+    "account_number": "001-0002",
+    "balance_cents": 5000000
+  },
+  {
+    "email": "carol@example.com",
+    "full_name": "Carol López",
+    "password": "password123",
+    "account_number": "001-0003",
+    "balance_cents": 2500000
+  }
+]

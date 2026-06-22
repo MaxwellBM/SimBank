@@ -2,12 +2,16 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type PostgresStore struct {
 	pool *pgxpool.Pool
@@ -69,7 +73,7 @@ func (s *PostgresStore) CreateUser(ctx context.Context, u *User) error {
 func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 		SELECT id, email, password_hash, full_name,
-		       tigerbeetle_account_id::text, account_number,
+		       tigerbeetle_account_id, account_number,
 		       created_at, updated_at
 		FROM users WHERE email = $1`
 
@@ -80,6 +84,9 @@ func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (*User
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, fmt.Errorf("get user by email: %w", err)
 	}
 	return u, nil
@@ -88,7 +95,7 @@ func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (*User
 func (s *PostgresStore) GetUserByID(ctx context.Context, id string) (*User, error) {
 	query := `
 		SELECT id, email, password_hash, full_name,
-		       tigerbeetle_account_id::text, account_number,
+		       tigerbeetle_account_id, account_number,
 		       created_at, updated_at
 		FROM users WHERE id = $1`
 
@@ -99,6 +106,9 @@ func (s *PostgresStore) GetUserByID(ctx context.Context, id string) (*User, erro
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, fmt.Errorf("get user by id: %w", err)
 	}
 	return u, nil
@@ -107,7 +117,7 @@ func (s *PostgresStore) GetUserByID(ctx context.Context, id string) (*User, erro
 func (s *PostgresStore) GetUserByAccountNumber(ctx context.Context, accountNumber string) (*User, error) {
 	query := `
 		SELECT id, email, password_hash, full_name,
-		       tigerbeetle_account_id::text, account_number,
+		       tigerbeetle_account_id, account_number,
 		       created_at, updated_at
 		FROM users WHERE account_number = $1`
 
@@ -118,6 +128,9 @@ func (s *PostgresStore) GetUserByAccountNumber(ctx context.Context, accountNumbe
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, fmt.Errorf("get user by account number: %w", err)
 	}
 	return u, nil

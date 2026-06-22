@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"net"
+	"strconv"
 	"time"
 
 	tb "github.com/tigerbeetle/tigerbeetle-go"
 
 	"banca-backend/internal/models"
 )
+
+var ErrInsufficientFunds = errors.New("insufficient funds")
 
 const (
 	bankControlAccountID = 1
@@ -19,16 +23,46 @@ const (
 	centsPerDollar       = 100
 )
 
+// resolveAddresses converts host:port addresses to IP:port, because the TB
+// native client (v0.17.x) rejects hostnames and requires raw IP addresses.
+func resolveAddresses(addrs []string) ([]string, error) {
+	resolved := make([]string, len(addrs))
+	for i, addr := range addrs {
+		host, portStr, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, fmt.Errorf("split %q: %w", addr, err)
+		}
+		if _, err := strconv.Atoi(portStr); err != nil {
+			return nil, fmt.Errorf("invalid port in %q: %w", addr, err)
+		}
+		// If already an IP, use it directly.
+		if net.ParseIP(host) != nil {
+			resolved[i] = addr
+			continue
+		}
+		ips, err := net.LookupHost(host)
+		if err != nil {
+			return nil, fmt.Errorf("lookup %q: %w", host, err)
+		}
+		resolved[i] = net.JoinHostPort(ips[0], portStr)
+	}
+	return resolved, nil
+}
+
 type Ledger struct {
 	client tb.Client
 }
 
 func NewLedger(clusterID uint32, addresses []string) (*Ledger, error) {
+	resolved, err := resolveAddresses(addresses)
+	if err != nil {
+		return nil, fmt.Errorf("resolve addresses: %w", err)
+	}
+
 	var client tb.Client
-	var err error
 
 	for i := 0; i < 30; i++ {
-		client, err = tb.NewClient(tb.ToUint128(uint64(clusterID)), addresses)
+		client, err = tb.NewClient(tb.ToUint128(uint64(clusterID)), resolved)
 		if err == nil {
 			break
 		}
@@ -198,7 +232,7 @@ func (l *Ledger) Withdraw(accountID string, amount float64) error {
 
 	if len(results) > 0 && results[0].Status != tb.TransferCreated {
 		if results[0].Status == tb.TransferExceedsCredits {
-			return fmt.Errorf("insufficient funds: withdrawal of $%.2f would overdraw account", amount)
+			return fmt.Errorf("%w: withdrawal of $%.2f would overdraw account", ErrInsufficientFunds, amount)
 		}
 		return fmt.Errorf("withdraw failed: %s", results[0].Status)
 	}
@@ -239,7 +273,7 @@ func (l *Ledger) Transfer(fromAccountID, toAccountID string, amount float64) err
 
 	if len(results) > 0 && results[0].Status != tb.TransferCreated {
 		if results[0].Status == tb.TransferExceedsCredits {
-			return fmt.Errorf("insufficient funds: transfer of $%.2f would overdraw account", amount)
+			return fmt.Errorf("%w: transfer of $%.2f would overdraw account", ErrInsufficientFunds, amount)
 		}
 		return fmt.Errorf("transfer failed: %s", results[0].Status)
 	}

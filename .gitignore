@@ -17,6 +17,9 @@ frontend/.vite/
 # Env
 .env
 
+# TigerBeetle data files (generated, very large)
+data/tb2/
+
 # OS
 .DS_Store
 Thumbs.db

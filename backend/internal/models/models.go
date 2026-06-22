@@ -66,13 +66,20 @@ type Transaction struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 type ChatRequest struct {
-	Message string `json:"message"`
+	Message string        `json:"message"`
+	History []ChatMessage `json:"history,omitempty"`
 }
 
 type ChatResponse struct {
-	Reply  string         `json:"reply"`
-	Action *PendingAction `json:"action,omitempty"`
+	Reply                  string         `json:"reply"`
+	Action                 *PendingAction `json:"action,omitempty"`
+	RequiresConfirmation   bool           `json:"requires_confirmation"`
 }
 
 type PendingAction struct {
@@ -83,4 +90,12 @@ type PendingAction struct {
 	Amount      float64 `json:"amount"`
 	Description string  `json:"description,omitempty"`
 	Status      string  `json:"status"`
+}
+
+type ConfirmRequest struct {
+	ActionID    string  `json:"action_id"`
+	ActionType  string  `json:"action_type"`
+	ToAccount   string  `json:"to_account,omitempty"`
+	Amount      float64 `json:"amount"`
+	Description string  `json:"description,omitempty"`
 }
